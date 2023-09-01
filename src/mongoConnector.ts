@@ -28,9 +28,9 @@ interface ModelData {
 }
 
 interface MongoStores {
-  user: ModelData;
-  guild: ModelData;
-  guildMember: ModelData;
+  user?: ModelData;
+  guild?: ModelData;
+  guildMember?: ModelData;
 }
 
 export class MongoConnector {
@@ -39,9 +39,9 @@ export class MongoConnector {
   userStore: any;
   guildStore: any;
   guildMemberStore: any;
-  private readonly guildMemberModelData: ModelData;
-  private readonly userModelData: ModelData;
-  private readonly guildModelData: ModelData;
+  private readonly guildMemberModelData: ModelData | undefined;
+  private readonly userModelData: ModelData | undefined;
+  private readonly guildModelData: ModelData | undefined;
 
   constructor(url: string, stores: MongoStores) {
     this.url = url;
@@ -62,14 +62,19 @@ export class MongoConnector {
   }
 
   async initialize(): Promise<void> {
-    this.connection = await connect(this.url);
-    console.log("connected");
-    this.userStore = this.connection.model(this.userModelData.name, this.userModelData.schema);
-    this.guildStore = this.connection.model(this.guildModelData.name, this.guildModelData.schema);
-    this.guildMemberStore = this.connection.model(this.guildMemberModelData.name, this.guildMemberModelData.schema);
+    try {
+      this.connection = await connect(this.url);
+    } catch (err) {
+      console.log("error connecting to db!");
+    }
+    if (this.userModelData) this.userStore = this.connection.model(this.userModelData.name, this.userModelData.schema);
+    if (this.guildModelData) this.guildStore = this.connection.model(this.guildModelData.name, this.guildModelData.schema);
+    if (this.guildMemberModelData)
+      this.guildMemberStore = this.connection.model(this.guildMemberModelData.name, this.guildMemberModelData.schema);
   }
 
   async getUser(id: string): Promise<any> {
+    if (!this.userStore) return null;
     let user = await this.userStore.findById(id);
 
     if (!user)
@@ -77,12 +82,13 @@ export class MongoConnector {
         user = await this.createUser(id);
       } catch (err) {
         user = await this.userStore.findById(id);
-        if (!user) return;
+        if (!user) return null;
       }
     return user;
   }
 
   async getGuild(id: string): Promise<any> {
+    if (!this.guildStore) return null;
     let guild = await this.guildStore.findById(id);
 
     if (!guild)
@@ -90,12 +96,14 @@ export class MongoConnector {
         guild = await this.createGuild(id);
       } catch (err) {
         guild = await this.guildStore.findById(id);
-        if (!guild) return;
+        if (!guild) return null;
       }
     return guild;
   }
 
   async getGuildMember(id: string, guildId: string): Promise<any> {
+    if (!this.guildMemberStore) return null;
+
     let guild = await this.getGuild(guildId);
 
     let guildMember = await guild.members.id(id);
@@ -112,14 +120,17 @@ export class MongoConnector {
   }
 
   async createUser(id: string): Promise<any> {
+    if (!this.userStore) return null;
     return this.userStore.create({ _id: id });
   }
 
   async createGuild(id: string): Promise<any> {
+    if (!this.guildStore) return null;
     return this.guildStore.create({ _id: id });
   }
 
   async createGuildMember(id: string, guild): Promise<any> {
+    if (!this.guildMemberStore) return null;
     const member = guild.members.push({ _id: id });
 
     await guild.save();
@@ -127,8 +138,10 @@ export class MongoConnector {
   }
 
   async updateGuild(id: string): Promise<any> {
+    if (!this.guildStore) return null;
     const GuildStore = this.guildStore;
 
+    console.log(this.guildStore);
     let guild = await this.guildStore.findOne({ _id: id });
 
     if (!guild)
@@ -146,6 +159,7 @@ export class MongoConnector {
   }
 
   async updateUser(id: string): Promise<any> {
+    if (!this.userStore) return null;
     const UserStore = this.userStore;
 
     let user = await this.userStore.findOne({ _id: id });
@@ -165,6 +179,7 @@ export class MongoConnector {
   }
 
   async updateGuildMember(id: string, guildId: string): Promise<any> {
+    if (!this.guildMemberStore) return null;
     const GuildMemberStore = this.guildMemberStore;
 
     let guild = await this.guildStore.findOne({ _id: guildId });
