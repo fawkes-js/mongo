@@ -141,7 +141,6 @@ export class MongoConnector {
     if (!this.guildStore) return null;
     const GuildStore = this.guildStore;
 
-    console.log(this.guildStore);
     let guild = await this.guildStore.findOne({ _id: id });
 
     if (!guild)
