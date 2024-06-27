@@ -64,7 +64,7 @@ export class MongoConnector {
   async initialize(): Promise<void> {
     try {
       this.connection = await connect(this.url);
-      console.log("[Client] MongoDB Database Connection Successfull");
+      console.log("[Client] MongoDB Database Connection Successful");
     } catch (err) {
       console.log("error connecting to db!");
     }
